@@ -1,7 +1,4 @@
 import { useEffect, useState } from "react";
-import { Footer } from "./components/Footer";
-import { Header } from "./components/Header";
-import { Post } from "./components/Post";
 import supabase from "./lib/helper/supabaseClient";
 
 export default function App() {
@@ -20,28 +17,50 @@ export default function App() {
     getSession();
   }, []);
 
+  useEffect(() => {
+    const session = supabase.auth.getSession();
+    setUser(session?.user);
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      switch (event) {
+        case "SIGNED_IN":
+          setUser(session?.user);
+          break;
+        case "SIGNED_OUT":
+          setUser(null);
+          break;
+        default:
+          console.log("caso no estimado");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const handleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    await supabase.auth.signInWithOAuth({
       provider: "github",
     });
-    if (error) {
-      console.log(error);
-    } else {
-      console.log(data);
-    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
   };
 
   return (
     <>
-      <Header />
-      <button onClick={handleLogin}>Inicia sesion Github </button>
-      <Post
-        titulo={"Bienvenido a la Escupidela de Salti"}
-        descripcion={"Que tan rudo eres?"}
-        link={"BLOG-ANECDOTA/public/img"}
-        parrafo={"Muchacho"}
-      />
-      <Footer />
+      {user ? (
+        <div>
+          <h2> Authenticated </h2>
+          <button onClick={handleLogout}>logout</button>
+        </div>
+      ) : (
+        <button onClick={handleLogin}>login GitHub</button>
+      )}
     </>
   );
 }
